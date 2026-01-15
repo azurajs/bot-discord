@@ -24,6 +24,7 @@ RUN mix local.hex --force && \
 COPY mix.exs mix.lock ./
 COPY config ./config
 COPY lib ./lib
+COPY .env .env
 
 # ------------------------------------
 # Baixar e compilar dependências como root
