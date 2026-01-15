@@ -7,11 +7,11 @@ defmodule AzuraJS.Consumer do
 
   @impl true
   def handle_event({:READY, _ws_state}) do
-    Api.update_status(%{
+    Api.update_status(0, %{
       status: "online",
       activities: [
         %{
-          nmae: "AzuraJS | https://azura.js.org",
+          name: "AzuraJS | https://azura.js.org",
           type: 0
         }
       ]
