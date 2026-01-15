@@ -1,0 +1,42 @@
+name: Deploy Discloud Elixir Bot (Manual)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Erlang & Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27"
+          elixir-version: "1.19"
+
+      - name: Install dependencies (optional sanity check)
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+
+      - name: Create deploy zip
+        run: |
+          zip -r deploy.zip . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "_build/*" \
+            -x "deps/*" \
+            -x "test/*"
+
+      - name: Upload to Discloud API
+        run: |
+          curl -X PUT "https://api.discloud.app/v2/app/azurajs/commit" \
+            -H "api-token: ${{ secrets.DISCLOUD_TOKEN }}" \
+            -F "file=@deploy.zip"
