@@ -6,16 +6,9 @@ defmodule AzuraJS.Consumer do
   alias AzuraJS.Commands.Structure.Router
 
   @impl true
-  def handle_event({:READY, _ws_state}) do
-    Api.update_status(0, %{
-      status: "online",
-      activities: [
-        %{
-          name: "AzuraJS | https://azura.js.org",
-          type: 0
-        }
-      ]
-    })
+  def handle_event({:READY, _ready_event, _ws_state}) do
+    Api.Self.update_status(:online, "AzuraJS | https://azura.js.org", 0)
+    :ok
   end
 
   @impl true
@@ -77,12 +70,12 @@ defmodule AzuraJS.Consumer do
   defp process_query(msg, query) do
     Logger.info("Processing query...")
 
-    case AzuraJS.Gemini.request(query) do
+    case AzuraJS.MnnIA.request(query) do
       {:ok, text} ->
         Api.Message.create(msg.channel_id, text)
 
       {:error, reason} ->
-        Logger.error("Gemini request failed: #{inspect(reason)}")
+        Logger.error("MnnIA request failed: #{inspect(reason)}")
         Api.Message.create(msg.channel_id, "Desculpe, não consegui obter a resposta do modelo.")
     end
   end
