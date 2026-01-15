@@ -26,6 +26,18 @@ jobs:
           mix local.rebar --force
           mix deps.get
 
+      - name: Create .env from secrets (do NOT print values)
+        run: |
+          # criar arquivo .env com dados sensíveis vindos de secrets
+          cat > .env <<EOF
+          MNN_API_KEY=${{ secrets.MNN_API_KEY }}
+          DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}
+          # adicione aqui outras variáveis necessárias
+          EOF
+
+          # permissões restritas (somente leitura/escrita para o runner user)
+          chmod 600 .env
+
       - name: Create deploy zip
         run: |
           zip -r deploy.zip . \
@@ -36,7 +48,16 @@ jobs:
             -x "test/*"
 
       - name: Upload to Discloud API
+        env:
+          DISCLOUD_TOKEN: ${{ secrets.DISCLOUD_TOKEN }}
         run: |
           curl -X PUT "https://api.discloud.app/v2/app/1768442793665/commit" \
-            -H "api-token: ${{ secrets.DISCLOUD_TOKEN }}" \
+            -H "api-token: $DISCLOUD_TOKEN" \
             -F "file=@deploy.zip"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # remover .env e zip por segurança
+          shred -u .env || rm -f .env
+          rm -f deploy.zip
