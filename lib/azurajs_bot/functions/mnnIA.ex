@@ -113,6 +113,7 @@ defmodule AzuraJS.MnnIA do
         "input" => input_messages,
         "temperature" => 0.0,
         "max_output_tokens" => 800,
+        "tools" => [%{ "type" => "web_search_preview" }]
       }
       |> Jason.encode!()
 
