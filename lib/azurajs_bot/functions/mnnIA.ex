@@ -56,12 +56,12 @@ defmodule AzuraJS.MnnIA do
       - A lista deve aparecer dentro do Summary e não como uma resposta separada ou fora do formato.
 
       Lista de parceiros (use exatamente este conteúdo quando a pergunta solicitar parceiros):
-      name: "Rincko Dev", url: "<https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>"
-      name: "Simo", url: "<https://simobotlist.online/>"
-      name: "Discloud", url: "<https://discloud.com/>"
-      name: "Gratian Pro", url: "<https://gratian.pro/>"
-      name: "Eduardo Developer", url: "<https://www.youtube.com/channel/UCOiAq87wiESjgifU4JozV1w>"
-      name: "MNN IA", url: "<https://mnnai.ru/>"
+      Rincko Dev <https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>
+      Simo <https://simobotlist.online/>
+      Discloud <https://discloud.com/>
+      Gratian Pro <https://gratian.pro/>
+      Eduardo Developer <https://www.youtube.com/channel/UCOiAq87wiESjgifU4JozV1w>
+      MNN IA <https://mnnai.ru/>
       """
 
       allowed_routes_en = [
@@ -165,23 +165,23 @@ defmodule AzuraJS.MnnIA do
     Abaixo estão os nossos parceiros oficiais.
 
     Parceiros:
-    name: "Rincko Dev", url: "<https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>"
-    name: "Simo", url: "<https://simobotlist.online/>"
-    name: "Discloud", url: "<https://discloud.com/>"
-    name: "Gratian Pro", url: "<https://gratian.pro/>"
-    name: "Eduardo Developer", url: "<https://www.youtube.com/channel/UCOiAq87wiESjgifU4JozV1w>"
-    name: "MNN IA", url: "<https://mnnai.ru/>"
+    Rincko Dev <https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>
+    Simo <https://simobotlist.online/>
+    Discloud <https://discloud.com/>
+    Gratian Pro <https://gratian.pro/>
+    Eduardo Developer <https://www.youtube.com/channel/UCOiAq87wiESjgifU4JozV1w>
+    MNN IA <https://mnnai.ru/>
     """
   end
 
   defp build_partners_response(_lang, doc_link) do
     """
-    Hi! 👋 (traduza dependendo da linguagem do texto pt ou en)
-    You can find this feature in the official documentation at: (traduza dependendo da linguagem do texto pt ou en)
+    Hi! 👋
+    You can find this feature in the official documentation at:
     https://azura.js.org
 
-    Summary: (traduza dependendo da linguagem do texto pt ou en)
-    Below are our official partners. (traduza dependendo da linguagem do texto pt ou en)
+    Summary:
+    Below are our official partners.
 
     Partners:
     Rincko Dev <https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>
