@@ -28,6 +28,7 @@ defmodule AzuraJS.MnnIA do
     5. Se a pergunta NÃO estiver coberta por nenhuma rota, responda exatamente:
     "Sorry — this question is outside the official AzuraJS documentation. See: https://azura.js.org/docs/{lang}/"
     6. Quando for enviar o link da documentação utilize a linguagem /docs/en/ ou /docs/pt/ conforme o idioma do texto.
+    7. Caso o usuário pergunte sobre parceiros ou apoiadores da AzuraJS, responda os parceiros que estão listados na página oficial: https://azura.js.org/ no final da página, na seção "Our Partners".
 
     LANGUAGE
     - Detecte e responda no mesmo idioma do usuário (`pt` ou `en`).
