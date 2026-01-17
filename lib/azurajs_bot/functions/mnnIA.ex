@@ -5,130 +5,197 @@ defmodule AzuraJS.MnnIA do
   @timeout 180_000
 
   def request(prompt) when is_binary(prompt) do
-    api_key = System.get_env("MNN_API_KEY") || ""
-    api_base = System.get_env("MNN_API_BASE") || "https://api.mnnai.ru/v1"
-    url = String.trim_trailing(api_base, "/") <> "/responses"
+    if partners_query?(prompt) do
+      lang = detect_lang(prompt)
+      doc_link = "https://azura.js.org/docs/#{lang}/"
+      {:ok, build_partners_response(lang, doc_link)}
+    else
+      api_key = System.get_env("MNN_API_KEY") || ""
+      api_base = System.get_env("MNN_API_BASE") || "https://api.mnnai.ru/v1"
+      url = String.trim_trailing(api_base, "/") <> "/responses"
 
-    system_instruction = """
-    SYSTEM:
+      system_instruction = """
+      SYSTEM:
 
-    Você é o Assistente Oficial do servidor Discord da AzuraJS. 👋✨
-    Sua função: responder **apenas** perguntas sobre o framework AzuraJS e **apenas** com informação que exista explicitamente na documentação oficial.
+      Você é o Assistente Oficial do servidor Discord da AzuraJS. 👋✨
+      Sua função: responder **apenas** perguntas sobre o framework AzuraJS e **apenas** com informação que exista explicitamente na documentação oficial.
 
-    PERSONA (tom)
-    - Amigável, claro e "bem dahora": curto, objetivo, com emojis sutis.
-    - Profissional: não inventa, não supõe, não extrapola.
-    - Sempre cite a URL exata que serviu de fonte.
+      PERSONA (tom)
+      - Amigável, claro e "bem dahora": curto, objetivo, com emojis sutis.
+      - Profissional: não inventa, não supõe, não extrapola.
+      - Sempre cite a URL exata que serviu de fonte.
 
-    SOURCE RULES (obrigatórias)
-    1. Todas as respostas DEVEM SER baseadas exclusivamente nas páginas listadas em `allowed_routes`. Nenhuma outra fonte é permitida.
-    2. Não crie, presuma ou infera APIs, comportamentos, parâmetros ou exemplos que não estejam explicitamente documentados nas rotas permitidas.
-    3. Se a resposta requerer código, use apenas trechos EXATOS copiados ou estritamente paraphraseados da documentação. Marque blocos de código com ```js```/```ts```/```ex``` conforme o exemplo do site.
-    4. Toda resposta precisa incluir **apenas uma** URL do `allowed_routes` que contenha a informação usada. Coloque a URL logo após o cabeçalho inicial.
-    5. Se a pergunta NÃO estiver coberta por nenhuma rota, responda exatamente:
-    "Sorry — this question is outside the official AzuraJS documentation. See: https://azura.js.org/docs/{lang}/"
-    6. Quando for enviar o link da documentação utilize a linguagem /docs/en/ ou /docs/pt/ conforme o idioma do texto.
-    7. Caso o usuário pergunte sobre parceiros ou apoiadores da AzuraJS, responda os parceiros que estão listados na página oficial: https://azura.js.org/ no final da página, na seção "Our Partners".
+      SOURCE RULES (obrigatórias)
+      1. Todas as respostas DEVEM SER baseadas exclusivamente nas páginas listadas em `allowed_routes`. Nenhuma outra fonte é permitida.
+      2. Não crie, presuma ou infera APIs, comportamentos, parâmetros ou exemplos que não estejam explicitamente documentados nas rotas permitidas.
+      3. Se a resposta requerer código, use apenas trechos EXATOS copiados ou estritamente paraphraseados da documentação. Marque blocos de código com ```js```/```ts```/```ex``` conforme o exemplo do site.
+      4. Toda resposta precisa incluir **apenas uma** URL do `allowed_routes` que contenha a informação usada. Coloque a URL logo após o cabeçalho inicial.
+      5. Se a pergunta NÃO estiver coberta por nenhuma rota, responda exatamente:
+      "Sorry — this question is outside the official AzuraJS documentation. See: https://azura.js.org/docs/{lang}/"
+      6. Quando for enviar o link da documentação utilize a linguagem /docs/en/ ou /docs/pt/ conforme o idioma do texto.
 
-    LANGUAGE
-    - Detecte e responda no mesmo idioma do usuário (`pt` ou `en`).
+      LANGUAGE
+      - Detecte e responda no mesmo idioma do usuário (`pt` ou `en`).
 
-    RESPONSE FORMAT (ONLY for real questions)
-    Hi! 👋
-    You can find this feature in the official documentation at:
-    {full_documentation_link_from_allowed_routes}
+      RESPONSE FORMAT (ONLY for real questions)
+      Para qualquer pergunta que deva retornar informação do produto/documentação, use estritamente o seguinte formato de saída (adaptando a língua para pt/en conforme detectado):
+
+      Hi! 👋
+      You can find this feature in the official documentation at:
+      {full_documentation_link_from_allowed_routes}
+
+      Summary:
+      {uma explicação curta (1–3 parágrafos) copiada ou estritamente paraphraseada da página citada — sem adicionar nada novo}
+
+      Example:
+      {apenas se a página fornecer um exemplo em código — cole o trecho exato entre fences de código}
+
+      REGRAS ESPECIAIS PARA "PARCEIROS / PARTNERS"
+      - Se o usuário perguntar explicitamente "parceiros", "quem são os parceiros", "partners" ou variantes, responda **usando exatamente o mesmo RESPONSE FORMAT acima**.
+      - No campo Summary inclua uma seção final titulada "Partners:" (ou "Parceiros:" para pt) seguida pela lista EXATA abaixo, formatada como linhas separadas no corpo do Summary, sem alterar nomes ou URLs e mantendo o idioma do restante da resposta.
+      - A lista deve aparecer dentro do Summary e não como uma resposta separada ou fora do formato.
+
+      Lista de parceiros (use exatamente este conteúdo quando a pergunta solicitar parceiros):
+      name: "Rincko Dev", url: "<https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>"
+      name: "Simo", url: "<https://simobotlist.online/>"
+      name: "Discloud", url: "<https://discloud.com/>"
+      name: "Gratian Pro", url: "<https://gratian.pro/>"
+      name: "Eduardo Developer", url: "<https://www.youtube.com/channel/UCOiAq87wiESjgifU4JozV1w>"
+      name: "MNN IA", url: "<https://mnnai.ru/>"
+      """
+
+      allowed_routes_en = [
+        "https://azura.js.org/docs/en/",
+        "https://azura.js.org/docs/en/installation",
+        "https://azura.js.org/docs/en/quick-start",
+        "https://azura.js.org/docs/en/javascript-usage",
+        "https://azura.js.org/docs/en/configuration",
+        "https://azura.js.org/docs/en/controllers",
+        "https://azura.js.org/docs/en/routing",
+        "https://azura.js.org/docs/en/decorators",
+        "https://azura.js.org/docs/en/middleware",
+        "https://azura.js.org/docs/en/validation",
+        "https://azura.js.org/docs/en/cookies",
+        "https://azura.js.org/docs/en/logger",
+        "https://azura.js.org/docs/en/cors",
+        "https://azura.js.org/docs/en/rate-limiting",
+        "https://azura.js.org/docs/en/proxy",
+        "https://azura.js.org/docs/en/cluster-mode",
+        "https://azura.js.org/docs/en/error-handling",
+        "https://azura.js.org/docs/en/swagger",
+        "https://azura.js.org/docs/en/custom-servers",
+        "https://azura.js.org/docs/en/type-extensions",
+        "https://azura.js.org/docs/en/modular-imports",
+        "https://azura.js.org/docs/en/typescript-support",
+        "https://azura.js.org/docs/en/performance",
+        "https://azura.js.org/docs/en/examples"
+      ]
+
+      allowed_routes_pt =
+        Enum.map(allowed_routes_en, fn r -> String.replace(r, "/en/", "/pt/") end)
+
+      allowed_routes = allowed_routes_en ++ allowed_routes_pt
+
+      lang = detect_lang(prompt)
+      route = choose_route(prompt, allowed_routes, lang)
+      doc_text = fetch_doc(route)
+
+      user_source = """
+      SOURCE_URL: #{route}
+
+      SOURCE_CONTENT_BEGIN
+      #{String.slice(doc_text, 0, 200_000)}
+      SOURCE_CONTENT_END
+
+      USER_QUESTION:
+      #{prompt}
+      """
+
+      input_messages = [
+        %{"role" => "system", "content" => system_instruction},
+        %{"role" => "user", "content" => user_source}
+      ]
+
+      body =
+        %{
+          "model" => @default_model,
+          "input" => input_messages,
+          "temperature" => 0.0,
+          "max_output_tokens" => 800
+        }
+        |> Jason.encode!()
+
+      headers = [
+        {"Content-Type", "application/json"},
+        {"Authorization", "Bearer " <> api_key}
+      ]
+
+      opts = [recv_timeout: @timeout, hackney: [inet6: false]]
+
+      case HTTPoison.post(url, body, headers, opts) do
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
+          parse_response_body(resp_body)
+
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} ->
+          {:error, %{status: code, body: resp_body}}
+
+        {:error, %HTTPoison.Error{} = err} ->
+          {:error, err}
+
+        other ->
+          {:error, other}
+      end
+    end
+  end
+
+  defp partners_query?(text) when is_binary(text) do
+    regex =
+      ~r/\b(parceir(?:o|os|a|as)?|partners?|who (are )?the partners|quem (são )?os parceiros)\b/i
+
+    Regex.match?(regex, text)
+  end
+
+  defp build_partners_response("pt", doc_link) do
+    """
+    Olá! 👋
+    Você pode encontrar este recurso na documentação oficial em:
+    #{doc_link}
 
     Summary:
-    {uma explicação curta (1–3 parágrafos) copiada ou estritamente paraphraseada da página citada — sem adicionar nada novo}
+    Abaixo estão os nossos parceiros oficiais.
 
-    Example:
-    {apenas se a página fornecer um exemplo em código — cole o trecho exato entre fences de código}
+    Parceiros:
+    name: "Rincko Dev", url: "<https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>"
+    name: "Simo", url: "<https://simobotlist.online/>"
+    name: "Discloud", url: "<https://discloud.com/>"
+    name: "Gratian Pro", url: "<https://gratian.pro/>"
+    name: "Eduardo Developer", url: "<https://www.youtube.com/channel/UCOiAq87wiESjgifU4JozV1w>"
+    name: "MNN IA", url: "<https://mnnai.ru/>"
     """
+  end
 
-    allowed_routes_en = [
-      "https://azura.js.org/docs/en/",
-      "https://azura.js.org/docs/en/installation",
-      "https://azura.js.org/docs/en/quick-start",
-      "https://azura.js.org/docs/en/javascript-usage",
-      "https://azura.js.org/docs/en/configuration",
-      "https://azura.js.org/docs/en/controllers",
-      "https://azura.js.org/docs/en/routing",
-      "https://azura.js.org/docs/en/decorators",
-      "https://azura.js.org/docs/en/middleware",
-      "https://azura.js.org/docs/en/validation",
-      "https://azura.js.org/docs/en/cookies",
-      "https://azura.js.org/docs/en/logger",
-      "https://azura.js.org/docs/en/cors",
-      "https://azura.js.org/docs/en/rate-limiting",
-      "https://azura.js.org/docs/en/proxy",
-      "https://azura.js.org/docs/en/cluster-mode",
-      "https://azura.js.org/docs/en/error-handling",
-      "https://azura.js.org/docs/en/swagger",
-      "https://azura.js.org/docs/en/custom-servers",
-      "https://azura.js.org/docs/en/type-extensions",
-      "https://azura.js.org/docs/en/modular-imports",
-      "https://azura.js.org/docs/en/typescript-support",
-      "https://azura.js.org/docs/en/performance",
-      "https://azura.js.org/docs/en/examples"
-    ]
-
-    allowed_routes_pt = Enum.map(allowed_routes_en, fn r -> String.replace(r, "/en/", "/pt/") end)
-    allowed_routes = allowed_routes_en ++ allowed_routes_pt
-
-    lang = detect_lang(prompt)
-    route = choose_route(prompt, allowed_routes, lang)
-    doc_text = fetch_doc(route)
-
-    user_source = """
-    SOURCE_URL: #{route}
-
-    SOURCE_CONTENT_BEGIN
-    #{String.slice(doc_text, 0, 200_000)}
-    SOURCE_CONTENT_END
-
-    USER_QUESTION:
-    #{prompt}
+  defp build_partners_response(_lang, doc_link) do
     """
+    Hi! 👋 (traduza dependendo da linguagem do texto pt ou en)
+    You can find this feature in the official documentation at: (traduza dependendo da linguagem do texto pt ou en)
+    https://azura.js.org
 
-    input_messages = [
-      %{"role" => "system", "content" => system_instruction},
-      %{"role" => "user", "content" => user_source}
-    ]
+    Summary: (traduza dependendo da linguagem do texto pt ou en)
+    Below are our official partners. (traduza dependendo da linguagem do texto pt ou en)
 
-    body =
-      %{
-        "model" => @default_model,
-        "input" => input_messages,
-        "temperature" => 0.0,
-        "max_output_tokens" => 800
-      }
-      |> Jason.encode!()
-
-    headers = [
-      {"Content-Type", "application/json"},
-      {"Authorization", "Bearer " <> api_key}
-    ]
-
-    opts = [recv_timeout: @timeout, hackney: [inet6: false]]
-
-    case HTTPoison.post(url, body, headers, opts) do
-      {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
-        parse_response_body(resp_body)
-
-      {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} ->
-        {:error, %{status: code, body: resp_body}}
-
-      {:error, %HTTPoison.Error{} = err} ->
-        {:error, err}
-
-      other ->
-        {:error, other}
-    end
+    Partners:
+    Rincko Dev <https://www.youtube.com/channel/UCLutaD99Bd75axcoNwyU-iA>
+    Simo <https://simobotlist.online/>
+    Discloud <https://discloud.com/>
+    Gratian Pro <https://gratian.pro/>
+    Eduardo Developer <https://www.youtube.com/channel/UCOiAq87wiESjgifU4JozV1w>
+    MNN IA <https://mnnai.ru/>
+    """
   end
 
   defp detect_lang(text) when is_binary(text) do
     regex =
-      ~r/\b(olá|oi|como|qual|pra|por que|instalação|configuração|middleware|controllers|rotas|exemplo|boa tarde|bom dia|boa noite)\b/i
+      ~r/\b(olá|oi|como|qual|pra|por que|instalação|configuração|middleware|controllers|rotas|exemplo|boa tarde|bom dia|boa noite|parceiros|partners)\b/i
 
     if Regex.match?(regex, text), do: "pt", else: "en"
   end
