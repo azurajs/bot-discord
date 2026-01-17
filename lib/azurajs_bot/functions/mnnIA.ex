@@ -3,6 +3,7 @@ defmodule AzuraJS.MnnIA do
 
   @default_model "gpt-4o-azura"
   @timeout 180_000
+  @user_agent "AzuraJS-Gemini/1.0"
 
   def request(prompt) when is_binary(prompt) do
     api_key = System.get_env("MNN_API_KEY") || ""
@@ -108,7 +109,7 @@ defmodule AzuraJS.MnnIA do
       {"Authorization", "Bearer " <> api_key}
     ]
 
-    opts = [recv_timeout: @timeout, hackney: [inet6: false]]
+    opts = [recv_timeout: @timeout, hackney: [inet6: false], follow_redirect: true]
 
     case HTTPoison.post(url, body, headers, opts) do
       {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
@@ -127,7 +128,7 @@ defmodule AzuraJS.MnnIA do
 
   defp detect_lang(text) when is_binary(text) do
     regex =
-      ~r/\b(olá|oi|como|qual|pra|por que|instalação|configuração|middleware|controllers|rotas|exemplo|boa tarde|bom dia|boa noite)\b/i
+      ~r/\b(olá|oi|como|qual|pra|por que|instalação|configuração|middleware|controllers|rotas|exemplo|boa tarde|bom dia|boa noite|rota|rotas|routers|router)\b/i
 
     if Regex.match?(regex, text), do: "pt", else: "en"
   end
@@ -135,33 +136,95 @@ defmodule AzuraJS.MnnIA do
   defp choose_route(prompt, routes, lang) do
     filtered =
       Enum.filter(routes, fn r ->
-        String.ends_with?(r, "/#{lang}/") or String.contains?(r, "/#{lang}/")
+        String.contains?(r, "/#{lang}/")
       end)
 
-    down = String.downcase(prompt)
+    down = prompt |> String.downcase() |> String.replace(~r/[^\p{L}\p{N}\s-]/u, " ")
 
-    match =
+    synonyms = %{
+      "rota" => "routing",
+      "rotas" => "routing",
+      "router" => "routing",
+      "routers" => "routing",
+      "routes" => "routing",
+      "routing" => "routing",
+      "controller" => "controllers",
+      "controllers" => "controllers",
+      "instalação" => "installation",
+      "instalar" => "installation",
+      "instalacao" => "installation",
+      "configuração" => "configuration",
+      "configuracao" => "configuration",
+      "middleware" => "middleware",
+      "validação" => "validation",
+      "validacao" => "validation",
+      "cookie" => "cookies",
+      "cookies" => "cookies",
+      "logger" => "logger",
+      "cors" => "cors",
+      "rate-limiting" => "rate-limiting",
+      "proxy" => "proxy",
+      "cluster" => "cluster-mode",
+      "erro" => "error-handling",
+      "errores" => "error-handling",
+      "swagger" => "swagger",
+      "openapi" => "swagger",
+      "typescript" => "typescript-support",
+      "performance" => "performance",
+      "exemplo" => "examples",
+      "examples" => "examples"
+    }
+
+    words = String.split(down, ~r/\s+/, trim: true)
+
+    direct_match =
       Enum.find(filtered, fn r ->
         path = URI.parse(r).path || ""
         segments = String.split(path, "/", trim: true)
 
         Enum.any?(segments, fn seg ->
-          seg != "docs" and seg != lang and String.contains?(down, String.downcase(seg))
+          seg != "docs" and seg != lang and
+            Enum.any?(words, fn w -> String.contains?(w, seg) or String.contains?(seg, w) end)
         end)
       end)
 
-    case match do
-      nil -> "https://azura.js.org/docs/#{lang}/"
-      m -> m
+    if direct_match do
+      direct_match
+    else
+      synonym_match =
+        Enum.find(filtered, fn r ->
+          path = URI.parse(r).path || ""
+          segments = String.split(path, "/", trim: true)
+
+          Enum.any?(segments, fn seg ->
+            seg != "docs" and seg != lang and
+              Enum.any?(words, fn w ->
+                case Map.get(synonyms, w) do
+                  nil -> false
+                  slug -> String.contains?(seg, slug) or String.contains?(slug, seg)
+                end
+              end)
+          end)
+        end)
+
+      case synonym_match do
+        nil ->
+          Enum.find(filtered, fn r -> String.ends_with?(r, "/#{lang}/") end) ||
+            "https://azura.js.org/docs/#{lang}/"
+
+        m ->
+          m
+      end
     end
   end
 
   defp fetch_doc(url) when is_binary(url) do
-    headers = [{"User-Agent", "AzuraJS-Gemini/1.0"}]
-    opts = [recv_timeout: 10_000, hackney: [inet6: false]]
+    headers = [{"User-Agent", @user_agent}]
+    opts = [recv_timeout: 10_000, hackney: [inet6: false], follow_redirect: true]
 
     case HTTPoison.get(url, headers, opts) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} -> body
+      {:ok, %HTTPoison.Response{status_code: code}} when code in 300..399 -> ""
       _ -> ""
     end
   end
@@ -229,8 +292,8 @@ defmodule AzuraJS.MnnIA do
         |> Enum.map(&maybe_text_from_content/1)
         |> Enum.reject(&(&1 in [nil, ""]))
 
-      Map.has_key?(item, "message") and is_map(item["message"]) ->
-        extract_text_from_message(item["message"]) |> List.wrap()
+      Map.has_key?(item, "message") and is_map(Map.get(item, "message")) ->
+        extract_text_from_message(Map.get(item, "message")) |> List.wrap()
 
       true ->
         []
