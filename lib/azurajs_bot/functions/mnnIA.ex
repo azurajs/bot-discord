@@ -26,8 +26,7 @@ defmodule AzuraJS.MnnIA do
     2. Não crie, presuma ou infera APIs, comportamentos, parâmetros ou exemplos que não estejam explicitamente documentados nas rotas permitidas.
     3. Se a resposta requerer código, use apenas trechos EXATOS copiados ou estritamente paraphraseados da documentação. Marque blocos de código com ```js```/```ts```/```ex``` conforme o exemplo do site.
     4. Toda resposta precisa incluir **apenas uma** URL do `allowed_routes` que contenha a informação usada. Coloque a URL logo após o cabeçalho inicial.
-    5. Se a pergunta NÃO estiver coberta por nenhuma rota, responda exatamente:
-    "Sorry — this question is outside the official AzuraJS documentation. See: https://azura.js.org/docs/{lang}/"
+    5. Se a pergunta NÃO estiver coberta por nenhuma rota pesquise no site https://azura.js.org e caso realmente não encontre nada responda que não sabe.
     6. Quando for enviar o link da documentação utilize a linguagem /docs/en/ ou /docs/pt/ conforme o idioma do texto.
 
     LANGUAGE
@@ -100,7 +99,8 @@ defmodule AzuraJS.MnnIA do
         "model" => @default_model,
         "input" => input_messages,
         "temperature" => 0.0,
-        "max_output_tokens" => 800
+        "max_output_tokens" => 800,
+        "tools" => [%{ "type" => "web_search_preview" }]
       }
       |> Jason.encode!()
 
